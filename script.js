@@ -121,14 +121,22 @@ copyBtn.addEventListener('click', () => {
 });
 // --- Reset all ---
 resetBtn.addEventListener('click', () => {
-    gradeInputsArray.flat().forEach(i => i.value = '');
+    // Clear all input values and remove highlight classes
+    gradeInputsArray.flat().forEach(input => {
+        input.value = '';
+        input.classList.remove('high', 'low');
+    });
+    // Clear subject averages
     document.querySelectorAll('.subject-average').forEach(avg => {
         avg.textContent = '';
         avg.classList.remove('show', 'glow');
     });
+    // Clear overall result
     resultDiv.textContent = '';
     resultDiv.classList.remove('show');
+    // Hide copy button
     copyBtn.style.display = 'none';
+    // Save cleared grades to localStorage
     saveGrades();
 });
 // --- Theme Picker ---

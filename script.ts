@@ -132,16 +132,32 @@ copyBtn.addEventListener('click', ()=>{
   setTimeout(()=>copyBtn.innerHTML='<i class="fas fa-copy"></i> Copy Result',1500);
 });
 
+
 // --- Reset all ---
 resetBtn.addEventListener('click', ()=>{
-  gradeInputsArray.flat().forEach(i=>i.value='');
-  document.querySelectorAll<HTMLDivElement>('.subject-average').forEach(avg=>{
-    avg.textContent=''; avg.classList.remove('show','glow');
+  // Clear all input values and remove highlight classes
+  gradeInputsArray.flat().forEach(input=>{
+    input.value = '';
+    input.classList.remove('high', 'low');
   });
-  resultDiv.textContent=''; resultDiv.classList.remove('show');
-  copyBtn.style.display='none';
+
+  // Clear subject averages
+  document.querySelectorAll<HTMLDivElement>('.subject-average').forEach(avg=>{
+    avg.textContent = '';
+    avg.classList.remove('show','glow');
+  });
+
+  // Clear overall result
+  resultDiv.textContent = '';
+  resultDiv.classList.remove('show');
+
+  // Hide copy button
+  copyBtn.style.display = 'none';
+
+  // Save cleared grades to localStorage
   saveGrades();
 });
+
 
 // --- Theme Picker ---
 themeSelect.addEventListener('change', ()=>{
