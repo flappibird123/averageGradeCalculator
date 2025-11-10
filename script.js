@@ -1,15 +1,10 @@
 const subjectsContainer = document.querySelector('.subjects');
 const calculateBtn = document.getElementById('calculateBtn');
 const resultDiv = document.getElementById('result');
-const toggleModeBtn = document.getElementById('toggleMode');
-
-// Copy button
-const copyBtn = document.createElement('button');
-copyBtn.textContent = 'Copy Result';
-copyBtn.id = 'copyBtn';
-copyBtn.style.display = 'none';
-copyBtn.type = 'button';
-resultDiv.after(copyBtn);
+const resetBtn = document.getElementById('resetBtn');
+const copyBtn = document.getElementById('copyBtn');
+const themeSelect = document.getElementById('themeSelect');
+const toggleDark = document.getElementById('toggleDark');
 
 const criteria = ['A','B','C','D'];
 const subjects = [
@@ -17,8 +12,10 @@ const subjects = [
   'Maths','Music','PDHPE','Science','Technology','Visual Arts'
 ];
 
-// Generate subject cards and inputs
-subjects.forEach(subjectName => {
+let gradeInputsArray = []; // store input references for local storage
+
+// --- Generate subjects and inputs ---
+subjects.forEach(subjectName=>{
   const subjectDiv = document.createElement('div');
   subjectDiv.classList.add('subject');
   subjectDiv.innerHTML = `<h3>${subjectName}</h3>`;
@@ -27,39 +24,33 @@ subjects.forEach(subjectName => {
   inputsRow.classList.add('criterion-row');
 
   const gradeInputs = [];
-
-  criteria.forEach(c => {
+  criteria.forEach(c=>{
     const box = document.createElement('div');
     box.classList.add('criterion-box');
 
     const input = document.createElement('input');
-    input.type = 'text';
-    input.placeholder = '';
+    input.type='text';
     input.classList.add('grade');
+    input.placeholder='0-8';
 
     const label = document.createElement('label');
-    label.textContent = `Criterion ${c}`;
+    label.textContent=`Criterion ${c}`;
 
-    // Enforce 0–8 integers
-    input.addEventListener('input', () => {
+    // Input validation: only numbers 0-8 allowed, empty allowed
+    input.addEventListener('input', ()=>{
       // Remove non-digit characters
-      input.value = input.value.replace(/[^0-8]/g, '');
+      input.value = input.value.replace(/[^0-9]/g,'');
 
-      // Clamp value between 0 and 8
-      if(input.value !== '') {
-        input.value = Math.min(8, Math.max(0, parseInt(input.value)));
+      // Clamp value if not empty
+      if(input.value !== ''){
+        let val = parseInt(input.value);
+        if(val > 8) val = 8;
+        if(val < 0) val = 0;
+        input.value = val;
       }
 
-      // Update subject average live
-      const total = gradeInputs.reduce((sum, el) => {
-        const val = parseInt(el.value);
-        return sum + (isNaN(val) ? 0 : val);
-      }, 0);
-      const count = gradeInputs.filter(el => el.value !== '').length;
-      const avg = count ? (total / count).toFixed(2) : '';
-      avgDiv.textContent = avg ? `Subject Average: ${avg}` : '';
-      if(avg) avgDiv.classList.add('show');
-      else avgDiv.classList.remove('show');
+      updateSubjectAverage();
+      saveGrades();
     });
 
     gradeInputs.push(input);
@@ -74,53 +65,119 @@ subjects.forEach(subjectName => {
   subjectDiv.appendChild(inputsRow);
   subjectDiv.appendChild(avgDiv);
   subjectsContainer.appendChild(subjectDiv);
+
+  gradeInputsArray.push(gradeInputs);
+
+  // Function to update subject average
+  function updateSubjectAverage(){
+    let total=0,count=0;
+    gradeInputs.forEach(input=>{
+      input.classList.remove('high','low');
+      const val=parseInt(input.value);
+      if(!isNaN(val)){
+        total+=val;
+        count++;
+        if(val>=7) input.classList.add('high');
+        else if(val<=2) input.classList.add('low');
+      }
+    });
+    const avg=count?(total/count).toFixed(2):'';
+    avgDiv.textContent=avg?`Subject Average: ${avg}`:'';
+    avgDiv.classList.toggle('show',!!avg);
+    avgDiv.classList.remove('glow');
+    if(avg){ void avgDiv.offsetWidth; avgDiv.classList.add('glow'); }
+  }
+
+  updateSubjectAverage();
 });
 
-// Calculate overall average
-calculateBtn.addEventListener('click', () => {
-  const gradeInputs = document.querySelectorAll('.grade');
-  let total = 0;
-  let count = 0;
-
-  gradeInputs.forEach(input => {
-    const val = parseInt(input.value);
-    if(!isNaN(val)) {
-      total += val;
-      count++;
-    }
+// --- Calculate overall average ---
+calculateBtn.addEventListener('click',()=>{
+  let total=0,count=0;
+  gradeInputsArray.flat().forEach(input=>{
+    const val=parseInt(input.value);
+    if(!isNaN(val)){ total+=val; count++; }
   });
 
-  if(count === 0) {
-    resultDiv.textContent = "Please enter some grades!";
-    copyBtn.style.display = 'none';
+  if(count===0){
+    resultDiv.textContent="Please enter some grades!";
+    copyBtn.style.display='none';
     resultDiv.classList.remove('show');
   } else {
-    const average = (total / count).toFixed(2);
-    resultDiv.textContent = `Average Grade: ${average}`;
+    const average=(total/count).toFixed(2);
+    resultDiv.textContent=`Average Grade: ${average}`;
     resultDiv.classList.add('show');
-
-    // Glow animation
-    resultDiv.classList.remove('glow');
-    void resultDiv.offsetWidth; // force reflow
-    resultDiv.classList.add('glow');
-
-    copyBtn.style.display = 'inline-block';
+    copyBtn.style.display='inline-block';
   }
 });
 
-// Copy result to clipboard
-copyBtn.addEventListener('click', () => {
-  const numMatch = resultDiv.textContent.match(/[\d.]+/);
+// --- Copy result ---
+copyBtn.addEventListener('click',()=>{
+  const numMatch=resultDiv.textContent.match(/[\d.]+/);
   if(!numMatch) return;
-  const num = numMatch[0];
-  navigator.clipboard.writeText(num).then(() => {
-    copyBtn.textContent = 'Copied!';
-    setTimeout(() => copyBtn.textContent = 'Copy Result', 1500);
-  });
+  navigator.clipboard.writeText(numMatch[0]);
+  copyBtn.textContent='Copied!';
+  setTimeout(()=>copyBtn.innerHTML='<i class="fas fa-copy"></i> Copy Result',1500);
 });
 
-// Light/Dark mode toggle
-toggleModeBtn.addEventListener('click', () => {
-  document.body.classList.toggle('dark');
-  toggleModeBtn.textContent = document.body.classList.contains('dark') ? "Switch to Light Mode" : "Switch to Dark Mode";
+// --- Reset all ---
+resetBtn.addEventListener('click',()=>{
+  gradeInputsArray.flat().forEach(i=>i.value='');
+  document.querySelectorAll('.subject-average').forEach(avg=>{
+    avg.textContent=''; avg.classList.remove('show','glow');
+  });
+  resultDiv.textContent=''; resultDiv.classList.remove('show');
+  copyBtn.style.display='none';
+  saveGrades();
+});
+
+// --- Theme Picker ---
+themeSelect.addEventListener('change',()=>{
+  document.body.classList.remove('theme-blue','theme-green','theme-orange','theme-purple');
+  document.body.classList.add(themeSelect.value);
+  localStorage.setItem('theme', themeSelect.value);
+});
+
+// --- Dark Mode Toggle ---
+toggleDark.addEventListener('click',()=>{
+  document.body.classList.toggle('theme-dark');
+  if(document.body.classList.contains('theme-dark')){
+    toggleDark.innerHTML='<i class="fas fa-sun"></i> Light Mode';
+  } else {
+    toggleDark.innerHTML='<i class="fas fa-moon"></i> Dark Mode';
+  }
+  localStorage.setItem('darkMode', document.body.classList.contains('theme-dark'));
+});
+
+// --- Local Storage Functions ---
+function saveGrades(){
+  const gradeData = gradeInputsArray.map(subArr=>subArr.map(inp=>inp.value));
+  localStorage.setItem('grades', JSON.stringify(gradeData));
+}
+
+// --- Load grades, theme, and dark mode from local storage ---
+window.addEventListener('DOMContentLoaded',()=>{
+  const storedGrades = JSON.parse(localStorage.getItem('grades'));
+  if(storedGrades){
+    storedGrades.forEach((subArr,i)=>{
+      subArr.forEach((val,j)=>{
+        if(gradeInputsArray[i][j]) gradeInputsArray[i][j].value = val;
+        gradeInputsArray[i][j].dispatchEvent(new Event('input'));
+      });
+    });
+  }
+
+  // Load theme
+  const storedTheme = localStorage.getItem('theme');
+  if(storedTheme){
+    themeSelect.value = storedTheme;
+    document.body.classList.add(storedTheme);
+  }
+
+  // Load dark mode
+  const darkMode = localStorage.getItem('darkMode') === 'true';
+  if(darkMode){
+    document.body.classList.add('theme-dark');
+    toggleDark.innerHTML='<i class="fas fa-sun"></i> Light Mode';
+  }
 });
