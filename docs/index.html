@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -11,7 +10,7 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
   </head>
-  <body class="theme-light theme-blue">
+  <body class="theme-light">
     <div class="container">
       <h1>Grade Average Calculator</h1>
 
@@ -23,12 +22,7 @@
 
         <div class="theme-picker">
           <label for="themeSelect">Theme:</label>
-          <select id="themeSelect">
-            <option value="theme-blue">Blue</option>
-            <option value="theme-green">Green</option>
-            <option value="theme-orange">Orange</option>
-            <option value="theme-purple">Purple</option>
-          </select>
+          <select id="themeSelect"></select>
         </div>
 
         <button id="toggleDark" class="toolbar-btn">
@@ -49,6 +43,6 @@
       </button>
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.ts"></script>
   </body>
 </html>
