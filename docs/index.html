@@ -19,12 +19,10 @@
         <button id="resetBtn" class="toolbar-btn">
           <i class="fas fa-undo"></i> Reset All
         </button>
-
         <div class="theme-picker">
           <label for="themeSelect">Theme:</label>
           <select id="themeSelect"></select>
         </div>
-
         <button id="toggleDark" class="toolbar-btn">
           <i class="fas fa-moon"></i> Dark Mode
         </button>
@@ -37,9 +35,15 @@
         </button>
       </form>
 
+      <!-- Results -->
       <div id="result" class="result"></div>
       <button id="copyBtn" class="toolbar-btn" style="display: none">
-        <i class="fas fa-copy"></i> Copy Result
+        <i class="fas fa-copy"></i> Copy Average
+      </button>
+
+      <div id="mypResult" class="result" style="margin-top: 1rem; color: #FF9800;"></div>
+      <button id="copyMypBtn" class="toolbar-btn" style="display: none; margin-top: 0.5rem;">
+        <i class="fas fa-copy"></i> Copy MYP Grade
       </button>
     </div>
 

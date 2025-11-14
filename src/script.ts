@@ -16,8 +16,10 @@ interface Theme {
 const subjectsContainer = document.querySelector<HTMLDivElement>('.subjects')!;
 const calculateBtn = document.getElementById('calculateBtn') as HTMLButtonElement;
 const resultDiv = document.getElementById('result') as HTMLDivElement;
-const resetBtn = document.getElementById('resetBtn') as HTMLButtonElement;
+const mypResult = document.getElementById('mypResult') as HTMLDivElement;
 const copyBtn = document.getElementById('copyBtn') as HTMLButtonElement;
+const copyMypBtn = document.getElementById('copyMypBtn') as HTMLButtonElement;
+const resetBtn = document.getElementById('resetBtn') as HTMLButtonElement;
 const themeSelect = document.getElementById('themeSelect') as HTMLSelectElement;
 const toggleDark = document.getElementById('toggleDark') as HTMLButtonElement;
 
@@ -77,6 +79,17 @@ const themes: Theme[] = [
   }
 ];
 
+// --- MYP Grade Conversion ---
+function getMYPGrade(total: number): number {
+  if (total <= 5) return 1;
+  if (total <= 9) return 2;
+  if (total <= 14) return 3;
+  if (total <= 18) return 4;
+  if (total <= 23) return 5;
+  if (total <= 27) return 6;
+  return 7; // 28–32
+}
+
 // --- Functions ---
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
@@ -85,7 +98,6 @@ function applyTheme(theme: Theme) {
   root.style.setProperty('--bg-end', theme.bgEnd);
   root.style.setProperty('--text-color', theme.text);
 
-  // Update glow and high/low colors dynamically
   document.querySelectorAll<HTMLInputElement>('.criterion-box input').forEach(input => {
     if (input.classList.contains('high')) input.style.backgroundColor = theme.highColor;
     if (input.classList.contains('low')) input.style.backgroundColor = theme.lowColor;
@@ -94,7 +106,7 @@ function applyTheme(theme: Theme) {
   const avgStyle = document.createElement('style');
   avgStyle.id = 'theme-glow-style';
   avgStyle.textContent = `
-    @keyframes avgGlow { 
+    @keyframes avgGlow {
       0% { opacity: 0; transform: translateY(-5px); text-shadow: 0 0 0 ${theme.glowAvg}; }
       50% { opacity: 1; transform: translateY(0); text-shadow: 0 0 8px ${theme.glowAvg}, 0 0 12px ${theme.glowAvg}; }
       100% { opacity: 1; transform: translateY(0); text-shadow: 0 0 0 ${theme.glowAvg}; }
@@ -141,32 +153,67 @@ function updateSubjectAverage(gradeInputs: HTMLInputElement[], avgDiv: HTMLDivEl
   });
 
   const avg = count ? (total / count).toFixed(2) : '';
-  avgDiv.textContent = avg ? `Subject Average: ${avg}` : '';
-  avgDiv.classList.toggle('show', !!avg);
+  let displayText = '';
+  if (count === 4) {
+    const mypGrade = getMYPGrade(total);
+    displayText = `Subject Average: ${avg} → Grade ${mypGrade}`;
+  } else if (count > 0) {
+    displayText = `Subject Average: ${avg}`;
+  }
+  avgDiv.textContent = displayText;
+  avgDiv.classList.toggle('show', !!displayText);
   avgDiv.classList.remove('glow');
-
-  if (avg) {
-    void avgDiv.offsetWidth; // force reflow
+  if (displayText) {
+    void avgDiv.offsetWidth;
     avgDiv.classList.add('glow');
   }
 }
 
 function calculateOverallAverage() {
   let total = 0, count = 0;
-  gradeInputsArray.flat().forEach(input => {
-    const val = parseInt(input.value);
-    if (!isNaN(val)) { total += val; count++; }
+  const mypGrades: number[] = [];
+
+  gradeInputsArray.forEach(gradeInputs => {
+    let subTotal = 0, subCount = 0;
+    gradeInputs.forEach(input => {
+      const val = parseInt(input.value);
+      if (!isNaN(val)) {
+        subTotal += val;
+        subCount++;
+        total += val;
+        count++;
+      }
+    });
+    if (subCount === 4) {
+      mypGrades.push(getMYPGrade(subTotal));
+    }
   });
+
+  // Overall average
   if (!count) {
     resultDiv.textContent = "Please enter some grades!";
-    copyBtn.style.display = 'none';
     resultDiv.classList.remove('show');
+    copyBtn.style.display = 'none';
+    mypResult.classList.remove('show');
+    copyMypBtn.style.display = 'none';
     return;
   }
+
   const average = (total / count).toFixed(2);
-  resultDiv.textContent = `Average Grade: ${average}`;
+  resultDiv.innerHTML = `Average Grade: ${average}`;
   resultDiv.classList.add('show');
   copyBtn.style.display = 'inline-block';
+
+  // MYP Final Grade Average
+  if (mypGrades.length > 0) {
+    const mypAvg = (mypGrades.reduce((a, b) => a + b, 0) / mypGrades.length).toFixed(2);
+    mypResult.textContent = `MYP Final Grade Average: ${mypAvg}`;
+    mypResult.classList.add('show');
+    copyMypBtn.style.display = 'inline-block';
+  } else {
+    mypResult.classList.remove('show');
+    copyMypBtn.style.display = 'none';
+  }
 }
 
 function saveGrades() {
@@ -178,7 +225,7 @@ function loadGrades() {
   const stored = JSON.parse(localStorage.getItem('grades') || '[]') as string[][];
   stored.forEach((subArr, i) => {
     subArr.forEach((val, j) => {
-      if (gradeInputsArray[i][j]) {
+      if (gradeInputsArray[i]?.[j]) {
         gradeInputsArray[i][j].value = val;
         gradeInputsArray[i][j].dispatchEvent(new Event('input'));
       }
@@ -223,11 +270,13 @@ subjects.forEach(subjectName => {
     input.placeholder = '0-8';
     const label = document.createElement('label');
     label.textContent = `Criterion ${c}`;
+
     input.addEventListener('input', () => {
       input.value = clampGrade(input.value);
       updateSubjectAverage(gradeInputs, avgDiv);
       saveGrades();
     });
+
     gradeInputs.push(input);
     box.appendChild(input);
     box.appendChild(label);
@@ -250,7 +299,15 @@ copyBtn.addEventListener('click', () => {
   if (!match) return;
   navigator.clipboard.writeText(match[0]);
   copyBtn.textContent = 'Copied!';
-  setTimeout(() => copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Result', 1500);
+  setTimeout(() => copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Average', 1500);
+});
+
+copyMypBtn.addEventListener('click', () => {
+  const match = mypResult.textContent?.match(/[\d.]+/);
+  if (!match) return;
+  navigator.clipboard.writeText(match[0]);
+  copyMypBtn.textContent = 'Copied!';
+  setTimeout(() => copyMypBtn.innerHTML = '<i class="fas fa-copy"></i> Copy MYP Grade', 1500);
 });
 
 resetBtn.addEventListener('click', () => {
@@ -265,7 +322,9 @@ resetBtn.addEventListener('click', () => {
   });
   resultDiv.textContent = '';
   resultDiv.classList.remove('show');
+  mypResult.classList.remove('show');
   copyBtn.style.display = 'none';
+  copyMypBtn.style.display = 'none';
   saveGrades();
 });
 
@@ -286,4 +345,9 @@ toggleDark.addEventListener('click', () => {
 window.addEventListener('DOMContentLoaded', () => {
   loadGrades();
   loadTheme();
+  // Load dark mode
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.body.classList.add('theme-dark');
+    toggleDark.innerHTML = '<i class="fas fa-sun"></i> Light Mode';
+  }
 });
